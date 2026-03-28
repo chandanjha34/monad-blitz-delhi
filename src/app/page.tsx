@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { MonadBadge } from "@/components/MonadBadge";
-import { PokemonMap } from "@/components/map/PokemonMap";
+import { PokemonMapClientOnly } from "@/components/map/PokemonMapClientOnly";
+import { WalletPanel } from "@/components/WalletPanel";
 
 export default function Home() {
   return (
@@ -9,13 +10,13 @@ export default function Home() {
         <div className="space-y-4">
           <MonadBadge text="Instant finality powered by Monad" />
           <h1 className="text-5xl font-black leading-[0.95] text-black sm:text-7xl">
-            Catch, Discover
+            Connect, Discover
             <br />
             & Collect People
           </h1>
           <p className="max-w-xl text-lg font-bold text-zinc-800">
-            Proof Go now runs like Pokemon Go for networking. See nearby builders as avatars in real-time,
-            walk into range, reveal their card, and collect instantly on Monad.
+            Proof Go uses ambient networking: turn it on only when you are socially available,
+            discover nearby builders in a soft radar, wave, confirm meeting, then mint proof instantly on Monad.
           </p>
           <div className="flex flex-wrap gap-3">
             <Link
@@ -37,9 +38,9 @@ export default function Home() {
           <p className="mb-4 text-sm font-black uppercase tracking-wide text-zinc-700">Live Monad UX</p>
           <ul className="space-y-3 text-lg font-black text-black">
             <li>⚡ Confirmed on Monad</li>
-            <li>🗺️ Live location map with trainer avatars</li>
-            <li>🎯 Walk close → auto encounter → collect</li>
-            <li>🚀 Batch-friendly social interactions</li>
+            <li>🟢 Intent-first networking mode (45 min session)</li>
+            <li>🗺️ Proximity radar with soft avatar positions</li>
+            <li>👋 Wave + Meet confirmation before collect</li>
             <li>🧠 Wallets created silently</li>
           </ul>
           <div className="mt-6 rounded-2xl border-2 border-black bg-white p-4">
@@ -49,7 +50,9 @@ export default function Home() {
         </div>
       </section>
 
-      <PokemonMap />
+      <WalletPanel />
+
+      <PokemonMapClientOnly />
     </main>
   );
 }

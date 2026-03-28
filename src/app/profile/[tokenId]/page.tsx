@@ -30,6 +30,23 @@ export default async function ProfilePage({ params }: Props) {
         <div className="flex flex-col gap-4">
           <h1 className="text-4xl font-black text-black">{profile.name}</h1>
           <p className="text-lg font-bold text-zinc-700">{profile.tagline}</p>
+          {profile.oneLiner ? (
+            <p className="rounded-xl border-2 border-black bg-[#fef9c3] p-3 text-sm font-black text-black">
+              {profile.oneLiner}
+            </p>
+          ) : null}
+          {profile.creativeComment ? (
+            <p className="rounded-xl border-2 border-black bg-[#e0f2fe] p-3 text-sm font-bold text-zinc-800">
+              {profile.creativeComment}
+            </p>
+          ) : null}
+          {profile.pokemonNature || profile.pokemonType ? (
+            <div className="rounded-xl border-2 border-black bg-[#ffe4e6] p-3 text-sm font-black text-black">
+              {profile.pokemonNature ? `Nature: ${profile.pokemonNature}` : ""}
+              {profile.pokemonNature && profile.pokemonType ? " • " : ""}
+              {profile.pokemonType ? `Type: ${profile.pokemonType}` : ""}
+            </div>
+          ) : null}
           <div className="flex flex-wrap gap-2">
             {profile.traits.map((trait) => (
               <span

@@ -8,22 +8,29 @@ const pinata = jwt
   : null;
 
 export async function uploadJsonToStorage(payload: Record<string, unknown>) {
+  const fallback = {
+    uri: `data:application/json;base64,${Buffer.from(
+      JSON.stringify(payload),
+    ).toString("base64")}`,
+    ipfs: false,
+  };
+
   if (!pinata) {
-    return {
-      uri: `data:application/json;base64,${Buffer.from(
-        JSON.stringify(payload),
-      ).toString("base64")}`,
-      ipfs: false,
-    };
+    return fallback;
   }
 
-  const file = new File([JSON.stringify(payload)], `metadata-${Date.now()}.json`, {
-    type: "application/json",
-  });
+  try {
+    const file = new File([JSON.stringify(payload)], `metadata-${Date.now()}.json`, {
+      type: "application/json",
+    });
 
-  const uploaded = await pinata.upload.public.file(file);
-  return {
-    uri: `ipfs://${uploaded.cid}`,
-    ipfs: true,
-  };
+    const uploaded = await pinata.upload.public.file(file);
+    return {
+      uri: `ipfs://${uploaded.cid}`,
+      ipfs: true,
+    };
+  } catch (error) {
+    console.warn("Pinata upload failed, using inline metadata fallback.", error);
+    return fallback;
+  }
 }

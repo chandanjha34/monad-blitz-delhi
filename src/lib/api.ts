@@ -44,6 +44,18 @@ export async function fetchProfile(tokenId: string): Promise<IdentityProfile | n
   }
 }
 
+export async function fetchProfileByOwner(ownerAddress: string): Promise<IdentityProfile | null> {
+  try {
+    const res = await fetch(`${INDEXER_URL}/profiles/by-owner/${ownerAddress}`, { cache: "no-store" });
+    if (!res.ok) {
+      return null;
+    }
+    return (await res.json()) as IdentityProfile;
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchMyCollection(address: string): Promise<CollectionEntry[]> {
   try {
     const res = await fetch(`${INDEXER_URL}/collections/${address}`, { cache: "no-store" });

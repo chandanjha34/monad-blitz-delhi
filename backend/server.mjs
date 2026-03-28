@@ -3,9 +3,15 @@ import dotenv from "dotenv";
 import express from "express";
 import { Contract, JsonRpcProvider } from "ethers";
 import { createClient } from "@supabase/supabase-js";
+import path from "path";
+import { fileURLToPath } from "url";
 
-dotenv.config({ path: ".env.local" });
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const rootEnvLocal = path.resolve(__dirname, "..", ".env.local");
+const rootEnv = path.resolve(__dirname, "..", ".env");
+dotenv.config({ path: rootEnvLocal, override: true });
+dotenv.config({ path: rootEnv, override: false });
 
 const PORT = Number(process.env.INDEXER_PORT ?? 4001);
 const RPC_URL = process.env.MONAD_RPC_URL ?? "https://testnet-rpc.monad.xyz";
@@ -13,7 +19,12 @@ const IDENTITY_NFT_ADDRESS = process.env.NEXT_PUBLIC_IDENTITY_NFT_ADDRESS ?? "";
 const COLLECTION_REGISTRY_ADDRESS =
   process.env.NEXT_PUBLIC_COLLECTION_REGISTRY_ADDRESS ?? "";
 const SUPABASE_URL = process.env.SUPABASE_URL ?? "";
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+const SUPABASE_SERVICE_ROLE_KEY =
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+  ?? process.env.SUPABASE_PRIVATE_KEY
+  ?? process.env.SUPABASE_SECRET_KEY
+  ?? "";
+const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY ?? "";
 
 const identityAbi = [
   "event IdentityMinted(uint256 indexed tokenId, address indexed user, string metadataURI)",
@@ -26,9 +37,10 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: "3mb" }));
 
-const supabaseEnabled = Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
+const supabaseKey = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_PUBLISHABLE_KEY;
+const supabaseEnabled = Boolean(SUPABASE_URL && supabaseKey);
 const supabase = supabaseEnabled
-  ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+  ? createClient(SUPABASE_URL, supabaseKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     })
   : null;
@@ -164,15 +176,51 @@ app.get("/profiles/:tokenId", async (req, res) => {
   return res.json(data.payload);
 });
 
+app.get("/profiles/by-owner/:ownerAddress", async (req, res) => {
+  const ownerAddress = req.params.ownerAddress?.toLowerCase();
+  if (!ownerAddress) {
+    return res.status(400).json({ error: "ownerAddress is required" });
+  }
+
+  if (!supabase) {
+    const values = Array.from(localState.profiles.values())
+      .filter((profile) => (profile?.ownerAddress ?? "").toLowerCase() === ownerAddress)
+      .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
+
+    if (values.length === 0) {
+      return res.status(404).json({ error: "Profile not found for owner" });
+    }
+
+    return res.json(values[0]);
+  }
+
+  const { data } = await supabase
+    .from("profiles")
+    .select("payload, created_at")
+    .order("created_at", { ascending: false })
+    .limit(300);
+
+  const profile = (data ?? []).find((row) =>
+    (row?.payload?.ownerAddress ?? "").toLowerCase() === ownerAddress,
+  )?.payload;
+  if (!profile) {
+    return res.status(404).json({ error: "Profile not found for owner" });
+  }
+
+  return res.json(profile);
+});
+
 app.post("/collect", async (req, res) => {
   const { collectorAddress, collectorName, profileId, txHash } = req.body;
   if (!collectorAddress || !collectorName || !profileId || !txHash) {
     return res.status(400).json({ error: "Invalid payload" });
   }
 
+  const normalizedCollectorAddress = String(collectorAddress).toLowerCase();
+
   if (supabase) {
     await supabase.from("collections").insert({
-      collector_address: collectorAddress,
+      collector_address: normalizedCollectorAddress,
       collector_name: collectorName,
       profile_id: profileId,
       tx_hash: txHash,
@@ -180,7 +228,7 @@ app.post("/collect", async (req, res) => {
     });
   } else {
     localState.collections.push({
-      collectorAddress,
+      collectorAddress: normalizedCollectorAddress,
       collectorName,
       profileId,
       txHash,
@@ -199,9 +247,11 @@ app.post("/collect", async (req, res) => {
 });
 
 app.get("/collections/:collectorAddress", async (req, res) => {
+  const normalizedCollectorAddress = String(req.params.collectorAddress ?? "").toLowerCase();
+
   if (!supabase) {
     const rows = localState.collections
-      .filter((entry) => entry.collectorAddress === req.params.collectorAddress)
+      .filter((entry) => String(entry.collectorAddress).toLowerCase() === normalizedCollectorAddress)
       .sort((a, b) => b.createdAt - a.createdAt);
     return res.json(rows);
   }
@@ -209,7 +259,7 @@ app.get("/collections/:collectorAddress", async (req, res) => {
   const { data } = await supabase
     .from("collections")
     .select("collector_address, collector_name, profile_id, tx_hash, created_at")
-    .eq("collector_address", req.params.collectorAddress)
+    .eq("collector_address", normalizedCollectorAddress)
     .order("created_at", { ascending: false });
 
   const rows = (data ?? []).map((row) => ({
@@ -304,7 +354,11 @@ async function startChainSync() {
 app.listen(PORT, async () => {
   console.log(`Proof Go indexer listening on ${PORT}`);
   if (supabase) {
-    console.log("Using Supabase backend mode.");
+    if (SUPABASE_SERVICE_ROLE_KEY) {
+      console.log("Using Supabase backend mode (service role).");
+    } else {
+      console.log("Using Supabase backend mode (publishable key fallback).");
+    }
   } else {
     console.log("Using local fallback backend mode (set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to enable Supabase).");
   }

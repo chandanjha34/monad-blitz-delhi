@@ -3,20 +3,26 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { motion } from "framer-motion";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { fetchProfile } from "@/lib/api";
-import { getOrCreateEmbeddedWallet } from "@/lib/embeddedWallet";
 import { MonadBadge } from "@/components/MonadBadge";
+import { COLLECTION_FEE_MON } from "@/lib/contracts";
+import { payCollectionFee } from "@/lib/walletFee";
+import { getTxExplorerUrl } from "@/lib/explorer";
 import type { IdentityProfile } from "@/lib/types";
 
 export default function PublicProfilePage() {
   const params = useParams<{ tokenId: string }>();
+  const { authenticated, login } = usePrivy();
+  const { wallets } = useWallets();
   const tokenId = params.tokenId;
   const [profile, setProfile] = useState<IdentityProfile | null>(null);
   const [collectorName, setCollectorName] = useState("");
   const [showPrompt, setShowPrompt] = useState(false);
   const [message, setMessage] = useState("");
-
-  const wallet = useMemo(() => getOrCreateEmbeddedWallet(), []);
+  const [feeExplorerUrl, setFeeExplorerUrl] = useState("");
+  const [collectExplorerUrl, setCollectExplorerUrl] = useState("");
+  const collectorAddress = useMemo(() => wallets[0]?.address ?? "", [wallets]);
 
   useEffect(() => {
     const load = async () => {
@@ -33,23 +39,72 @@ export default function PublicProfilePage() {
       return;
     }
 
-    setMessage("Executing on Monad...");
+    if (!authenticated) {
+      setMessage("Please login via email to collect.");
+      login();
+      return;
+    }
+
+    if (!collectorAddress) {
+      setMessage("Preparing your wallet, please try again in a moment.");
+      return;
+    }
+
+    if (!wallets[0]) {
+      setMessage("Wallet not ready yet. Please retry.");
+      return;
+    }
+
+    setMessage(`Paying ${COLLECTION_FEE_MON} MON collection fee...`);
+    setFeeExplorerUrl("");
+    setCollectExplorerUrl("");
+
+    let feeTxHash = "";
+    try {
+      const feeTx = await payCollectionFee(wallets[0]);
+      feeTxHash = feeTx.txHash;
+      setFeeExplorerUrl(feeTx.explorerUrl ?? getTxExplorerUrl(feeTx.txHash));
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? `Fee payment failed: ${error.message}`
+          : "Fee payment failed. Please fund wallet and retry.",
+      );
+      return;
+    }
+
+    setMessage("Executing collect on Monad...");
     const res = await fetch("/api/collect", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        collectorAddress: wallet.address,
+        collectorAddress,
         collectorName: collectorName.trim(),
         profileId: tokenId,
+        feeTxHash,
       }),
     });
 
+    const payload = (await res.json()) as {
+      error?: string;
+      txHash?: string;
+      txExplorerUrl?: string;
+      feeTxExplorerUrl?: string;
+    };
+
     if (!res.ok) {
-      setMessage("Could not collect this profile right now.");
+      setMessage(payload.error ?? "Could not collect this profile right now.");
       return;
     }
 
-    setMessage("⚡ Added instantly on Monad!");
+    if (payload.feeTxExplorerUrl) {
+      setFeeExplorerUrl(payload.feeTxExplorerUrl);
+    }
+    if (payload.txExplorerUrl) {
+      setCollectExplorerUrl(payload.txExplorerUrl);
+    }
+
+    setMessage("⚡ Added to collection on Monad!");
     setShowPrompt(false);
   };
 
@@ -73,6 +128,23 @@ export default function PublicProfilePage() {
         <div className="flex flex-col gap-4">
           <h1 className="text-4xl font-black text-black">{profile.name}</h1>
           <p className="text-lg font-bold text-zinc-700">{profile.tagline}</p>
+          {profile.oneLiner ? (
+            <p className="rounded-xl border-2 border-black bg-[#fef9c3] p-3 text-sm font-black text-black">
+              {profile.oneLiner}
+            </p>
+          ) : null}
+          {profile.creativeComment ? (
+            <p className="rounded-xl border-2 border-black bg-[#e0f2fe] p-3 text-sm font-bold text-zinc-800">
+              {profile.creativeComment}
+            </p>
+          ) : null}
+          {profile.pokemonNature || profile.pokemonType ? (
+            <div className="rounded-xl border-2 border-black bg-[#ffe4e6] p-3 text-sm font-black text-black">
+              {profile.pokemonNature ? `Nature: ${profile.pokemonNature}` : ""}
+              {profile.pokemonNature && profile.pokemonType ? " • " : ""}
+              {profile.pokemonType ? `Type: ${profile.pokemonType}` : ""}
+            </div>
+          ) : null}
           <div className="flex flex-wrap gap-2">
             {profile.traits.map((trait) => (
               <span
@@ -143,13 +215,33 @@ export default function PublicProfilePage() {
       ) : null}
 
       {message ? (
-        <motion.p
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           className="rounded-xl border-2 border-black bg-[#b3ff66] p-3 text-center font-black"
         >
-          {message}
-        </motion.p>
+          <p>{message}</p>
+          {feeExplorerUrl ? (
+            <a
+              href={feeExplorerUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-2 inline-block rounded-full border-2 border-black bg-white px-3 py-1 text-xs font-black"
+            >
+              View Fee Tx
+            </a>
+          ) : null}
+          {collectExplorerUrl ? (
+            <a
+              href={collectExplorerUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="ml-2 mt-2 inline-block rounded-full border-2 border-black bg-[#fff4d6] px-3 py-1 text-xs font-black"
+            >
+              View Collect Tx
+            </a>
+          ) : null}
+        </motion.div>
       ) : null}
     </main>
   );

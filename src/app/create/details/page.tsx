@@ -1,9 +1,9 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { getOrCreateEmbeddedWallet } from "@/lib/embeddedWallet";
 
 type MintResponse = {
   ok: boolean;
@@ -16,6 +16,8 @@ type MintResponse = {
 
 export default function CreateDetailsPage() {
   const router = useRouter();
+  const { authenticated, login, user } = usePrivy();
+  const { wallets } = useWallets();
   const [name, setName] = useState("");
 
   useEffect(() => {
@@ -40,7 +42,19 @@ export default function CreateDetailsPage() {
     setIsSubmitting(true);
     setLoadingText("Minting your vibe...");
 
-    const wallet = getOrCreateEmbeddedWallet();
+    let walletAddress = wallets[0]?.address;
+    if (!walletAddress) {
+      if (!authenticated) {
+        setIsSubmitting(false);
+        setLoadingText("Please login via email first.");
+        login();
+        return;
+      }
+
+      setIsSubmitting(false);
+      setLoadingText("Preparing your embedded wallet. Please retry in a moment.");
+      return;
+    }
 
     setLoadingText("Parallelizing interactions...");
     const response = await fetch("/api/identity/mint", {
@@ -48,7 +62,7 @@ export default function CreateDetailsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name,
-        walletAddress: wallet.address,
+        walletAddress,
         socials: { x, linkedin, instagram, resume },
       }),
     });
@@ -64,6 +78,9 @@ export default function CreateDetailsPage() {
     if (typeof window !== "undefined") {
       window.localStorage.setItem("proof-go-display-name", name);
       window.localStorage.setItem("proof-go-profile-id", payload.profile.tokenId);
+      if (user?.email?.address) {
+        window.localStorage.setItem("proof-go-email", user.email.address);
+      }
     }
     setTimeout(() => {
       router.push(`/profile/${payload.profile.tokenId}?fresh=1`);

@@ -12,6 +12,13 @@ export type IdentityProfile = {
   tagline: string;
   traits: string[];
   posterUrl: string;
+  cartoonImageUrl?: string | null;
+  sourceAvatarUrl?: string | null;
+  sourceSignals?: string[];
+  oneLiner?: string;
+  creativeComment?: string;
+  pokemonNature?: string;
+  pokemonType?: string;
   metadataUri: string;
   socials: SocialLinks;
   createdAt: number;

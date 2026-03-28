@@ -6,6 +6,19 @@ export const MONAD_TESTNET = {
   rpcUrl: process.env.NEXT_PUBLIC_MONAD_RPC_URL ?? "https://testnet-rpc.monad.xyz",
 };
 
+export const COLLECTION_FEE_MON = Number(process.env.NEXT_PUBLIC_COLLECTION_FEE_MON ?? "0.002");
+export const COLLECTION_FEE_RECIPIENT =
+  process.env.NEXT_PUBLIC_COLLECTION_FEE_RECIPIENT
+  ?? "0x000000000000000000000000000000000000dEaD";
+
+export const MONAD_FAUCET_URL =
+  process.env.NEXT_PUBLIC_MONAD_FAUCET_URL
+  ?? "https://faucet.monad.xyz";
+
+export const MONAD_TX_EXPLORER_BASE =
+  process.env.NEXT_PUBLIC_MONAD_TX_EXPLORER_BASE
+  ?? "https://testnet.monadexplorer.com/tx/";
+
 export const IDENTITY_NFT_ADDRESS =
   process.env.NEXT_PUBLIC_IDENTITY_NFT_ADDRESS ?? "";
 

@@ -14,6 +14,7 @@ export async function saveCollection(payload: {
   collectorName: string;
   profileId: string;
   txHash: string;
+  feeTxHash?: string;
 }) {
   await fetch(`${INDEXER_URL}/collect`, {
     method: "POST",

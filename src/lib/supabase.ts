@@ -17,5 +17,16 @@ export type LiveLocationRow = {
   latitude: number;
   longitude: number;
   avatar: string;
+  networking_until: string;
   updated_at: string;
+};
+
+export type EncounterWaveRow = {
+  id: number;
+  from_wallet: string;
+  to_wallet: string;
+  from_name: string;
+  profile_id: string | null;
+  status: "pending" | "accepted" | "rejected";
+  created_at: string;
 };
