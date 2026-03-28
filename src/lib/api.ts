@@ -6,7 +6,7 @@ import type {
 } from "@/lib/types";
 
 export const INDEXER_URL =
-  process.env.NEXT_PUBLIC_INDEXER_URL ?? "http://localhost:4001";
+  process.env.NEXT_PUBLIC_INDEXER_URL ?? "https://proof-go.onrender.com";
 
 export async function fetchStats(): Promise<MonadStats> {
   try {
