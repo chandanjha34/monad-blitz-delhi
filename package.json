@@ -1,0 +1,48 @@
+{
+  "name": "proofofmeet",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n web,indexer -c green,cyan \"next dev\" \"node backend/server.mjs\"",
+    "dev:web": "next dev",
+    "dev:indexer": "node backend/server.mjs",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@privy-io/react-auth": "^3.18.0",
+    "@supabase/supabase-js": "^2.100.1",
+    "better-sqlite3": "^12.8.0",
+    "clsx": "^2.1.1",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "ethers": "^6.16.0",
+    "express": "^5.2.1",
+    "framer-motion": "^12.38.0",
+    "leaflet": "^1.9.4",
+    "lucide-react": "^1.7.0",
+    "next": "16.2.1",
+    "openai": "^6.33.0",
+    "pinata": "^2.5.5",
+    "qrcode.react": "^4.2.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "react-leaflet": "^5.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "concurrently": "^9.2.1",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.1",
+    "tailwindcss": "^4",
+    "tsx": "^4.21.0",
+    "typescript": "^5"
+  }
+}
