@@ -78,6 +78,7 @@ export default function CreateDetailsPage() {
     if (typeof window !== "undefined") {
       window.localStorage.setItem("proof-go-display-name", name);
       window.localStorage.setItem("proof-go-profile-id", payload.profile.tokenId);
+      window.localStorage.setItem("proof-go-latest-profile", JSON.stringify(payload.profile));
       if (user?.email?.address) {
         window.localStorage.setItem("proof-go-email", user.email.address);
       }
